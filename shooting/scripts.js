@@ -1,65 +1,69 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-class Spaceship {
-  constructor(x, y, width, height) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-  }
-
-  draw() {
-    ctx.fillStyle = "white";
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  move(dx) {
-    this.x += dx;
-  }
-}
-
-class Bullet {
-  constructor(x, y, width, height) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-  }
-
-  draw() {
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  update() {
-    this.y -= 5;
-  }
-}
-
-class Enemy {
-  constructor(x, y, width, height) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-  }
-
-  draw() {
-    ctx.fillStyle = "red";
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  update() {
-    this.y += 1;
-  }
-}
-
 const spaceship = new Spaceship(canvas.width / 2 - 25, canvas.height - 50, 50, 50);
 const bullets = [];
 const enemies = [];
 
 let gameState = "start";
+let score = 0;
+
+function Spaceship(x, y, width, height) {
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+
+  this.move = function (distance) {
+    this.x += distance;
+  };
+
+  this.draw = function () {
+    ctx.fillStyle = "white";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  };
+}
+
+function Bullet(x, y, width, height) {
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+
+  this.update = function () {
+    this.y -= 5;
+  };
+
+  this.draw = function () {
+    ctx.fillStyle = "white";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  };
+}
+
+function Enemy(x, y, width, height) {
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+
+  this.update = function () {
+    this.y += 2;
+  };
+
+  this.draw = function () {
+    ctx.fillStyle = "red";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  };
+}
+
+function checkCollision(obj1, obj2) {
+  return (
+    obj1.x < obj2.x + obj2.width &&
+    obj1.x + obj1.width > obj2.x &&
+    obj1.y < obj2.y + obj2.height &&
+    obj1.y + obj1.height > obj2.y
+  );
+}
 
 function drawStartScreen() {
   ctx.fillStyle = "white";
@@ -67,6 +71,7 @@ function drawStartScreen() {
   ctx.fillText("シューティングゲーム", canvas.width / 2 - 100, canvas.height / 2 - 30);
   ctx.font = "20px Arial";
   ctx.fillText("スペースキーを押して開始", canvas.width / 2 - 85, canvas.height / 2 + 10);
+  drawLeaderboard();
 }
 
 function drawGameOverScreen() {
@@ -75,25 +80,56 @@ function drawGameOverScreen() {
   ctx.fillText("ゲームオーバー", canvas.width / 2 - 75, canvas.height / 2 - 30);
   ctx.font = "20px Arial";
   ctx.fillText("スペースキーを押してリトライ", canvas.width / 2 - 90, canvas.height / 2 + 10);
+  drawLeaderboard();
 }
 
-function checkCollision(a, b) {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
+function drawScore() {
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(`Score: ${score}`, 10, 30);
 }
 
-function spawnEnemy() {
-  const x = Math.random() * (canvas.width - 50);
-  const enemy = new Enemy(x, 0, 50, 50);
-  enemies.push(enemy);
-  setTimeout(spawnEnemy, 2000);
+function getHighScores() {
+  const highScores = JSON.parse(localStorage.getItem("highScores")) || [];
+  highScores.sort((a, b) => b - a);
+  return highScores.slice(0, 3);
 }
 
-spawnEnemy();
+function addToLeaderboard(score) {
+  const highScores = getHighScores();
+  highScores.push(score);
+  highScores.sort((a, b) => b - a);
+  localStorage.setItem("highScores", JSON.stringify(highScores.slice(0, 3))); // JSON.setItem を localStorage.setItem に変更
+}
+
+function drawLeaderboard() {
+  const highScores = getHighScores();
+
+  ctx.font = "20px Arial";
+  ctx.fillText("リーダーボード:", canvas.width / 2 - 70, canvas.height / 2 + 60);
+
+  for (let i = 0; i < highScores.length; i++) {
+    ctx.fillText(`${i + 1}. ${highScores[i]}`, canvas.width / 2 - 30, canvas.height / 2 + 90 + i * 30);
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    if (gameState === "start" || gameState === "gameover") {
+      gameState = "play";
+      score = 0;
+      spaceship.x = canvas.width / 2 - 25;
+      bullets.length = 0;
+      enemies.length = 0;
+    } else if (gameState === "play") {
+      bullets.push(new Bullet(spaceship.x + spaceship.width / 2 - 2.5, spaceship.y, 5, 10));
+    }
+  } else if (e.code === "ArrowLeft") {
+    spaceship.move(-10);
+  } else if (e.code === "ArrowRight") {
+    spaceship.move(10);
+  }
+});
 
 function update() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -102,51 +138,38 @@ function update() {
     drawStartScreen();
   } else if (gameState === "play") {
     spaceship.draw();
+    drawScore();
 
-    for (let i = 0; i < bullets.length; i++) {
-      const bullet = bullets[i];
+    for (const bullet of bullets) {
       bullet.update();
       bullet.draw();
-
-      if (bullet.y < 0) {
-        bullets.splice(i, 1);
-        i--;
-      }
     }
 
-    for(let i = 0; i < enemies.length; i++) {
-      const enemy = enemies[i];
+    for (const enemy of enemies) {
       enemy.update();
       enemy.draw();
-
-      if (enemy.y > canvas.height) {
-        enemies.splice(i, 1);
-        i--;
-      }
     }
 
-    for (let i = 0; i < bullets.length; i++) {
-      const bullet = bullets[i];
+    if (Math.random() < 0.02) {
+      enemies.push(new Enemy(Math.random() * (canvas.width - 20), 0, 20, 20));
+    }
 
-      for (let j = 0; j < enemies.length; j++) {
-        const enemy = enemies[j];
-
+    bullets.forEach((bullet, bulletIndex) => {
+      enemies.forEach((enemy, enemyIndex) => {
         if (checkCollision(bullet, enemy)) {
-          bullets.splice(i, 1);
-          i--;
-          enemies.splice(j, 1);
-          j--;
-          break;
+          bullets.splice(bulletIndex, 1);
+          enemies.splice(enemyIndex, 1);
+          score += 10;
         }
-      }
-    }
+      });
+    });
 
     for (let i = 0; i < enemies.length; i++) {
       const enemy = enemies[i];
 
       if (checkCollision(spaceship, enemy)) {
         gameState = "gameover";
-        return;
+        addToLeaderboard(score);
       }
     }
   } else if (gameState === "gameover") {
@@ -156,29 +179,4 @@ function update() {
   requestAnimationFrame(update);
 }
 
-function resetGame() {
-  spaceship.x = canvas.width / 2 - 25;
-  spaceship.y = canvas.height - 50;
-  bullets.length = 0;
-  enemies.length = 0;
-}
-
-document.addEventListener("keydown", (e) => {
-  if (e.code === "ArrowLeft" && spaceship.x > 0) {
-    spaceship.move(-10);
-  } else if (e.code === "ArrowRight" && spaceship.x < canvas.width - spaceship.width) {
-    spaceship.move(10);
-  } else if (e.code === "Space") {
-    if (gameState === "start") {
-      gameState = "play";
-    } else if (gameState === "gameover") {
-      gameState = "start";
-      resetGame();
-    } else if (gameState === "play") {
-      bullets.push(new Bullet(spaceship.x + spaceship.width / 2 - 2.5, spaceship.y, 5, 15));
-    }
-  }
-});
-
 update();
-
