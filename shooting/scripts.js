@@ -45,13 +45,21 @@ function Enemy(x, y, width, height) {
   this.y = y;
   this.width = width;
   this.height = height;
+  this.health = 3; // 体力プロパティを追加
 
   this.update = function () {
     this.y += 2;
   };
 
   this.draw = function () {
-    ctx.fillStyle = "red";
+    // 体力に応じて敵の色を変更
+    if (this.health === 3) {
+      ctx.fillStyle = "red";
+    } else if (this.health === 2) {
+      ctx.fillStyle = "yellow";
+    } else if (this.health === 1) {
+      ctx.fillStyle = "blue";
+    }
     ctx.fillRect(this.x, this.y, this.width, this.height);
   };
 }
@@ -151,15 +159,19 @@ function update() {
     }
 
     if (Math.random() < 0.02) {
-      enemies.push(new Enemy(Math.random() * (canvas.width - 20), 0, 20, 20));
+      enemies.push(new Enemy(Math.random() * (canvas.width - 40), 0, 40, 40));
     }
 
     bullets.forEach((bullet, bulletIndex) => {
       enemies.forEach((enemy, enemyIndex) => {
         if (checkCollision(bullet, enemy)) {
-          bullets.splice(bulletIndex, 1);
-          enemies.splice(enemyIndex, 1);
-          score += 10;
+          enemy.health--; // 敵の体力を1減らす
+          bullets.splice(bulletIndex, 1); // 弾を削除
+
+          if (enemy.health <= 0) {
+            enemies.splice(enemyIndex, 1); // 敵の体力が0以下なら敵を削除
+            score += 10; // スコアを加算
+          }
         }
       });
     });
