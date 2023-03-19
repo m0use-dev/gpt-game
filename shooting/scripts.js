@@ -59,6 +59,24 @@ const spaceship = new Spaceship(canvas.width / 2 - 25, canvas.height - 50, 50, 5
 const bullets = [];
 const enemies = [];
 
+let gameState = "start";
+
+function drawStartScreen() {
+  ctx.fillStyle = "white";
+  ctx.font = "30px Arial";
+  ctx.fillText("シューティングゲーム", canvas.width / 2 - 100, canvas.height / 2 - 30);
+  ctx.font = "20px Arial";
+  ctx.fillText("スペースキーを押して開始", canvas.width / 2 - 85, canvas.height / 2 + 10);
+}
+
+function drawGameOverScreen() {
+  ctx.fillStyle = "white";
+  ctx.font = "30px Arial";
+  ctx.fillText("ゲームオーバー", canvas.width / 2 - 75, canvas.height / 2 - 30);
+  ctx.font = "20px Arial";
+  ctx.fillText("スペースキーを押してリトライ", canvas.width / 2 - 90, canvas.height / 2 + 10);
+}
+
 function checkCollision(a, b) {
   return (
     a.x < b.x + b.width &&
@@ -80,59 +98,70 @@ spawnEnemy();
 function update() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  spaceship.draw();
+  if (gameState === "start") {
+    drawStartScreen();
+  } else if (gameState === "play") {
+    spaceship.draw();
 
-  for (let i = 0; i < bullets.length; i++) {
-    const bullet = bullets[i];
-    bullet.update();
-    bullet.draw();
+    for (let i = 0; i < bullets.length; i++) {
+      const bullet = bullets[i];
+      bullet.update();
+      bullet.draw();
 
-    if (bullet.y < 0) {
-      bullets.splice(i, 1);
-      i--;
-    }
-  }
-
-  for (let i = 0; i < enemies.length; i++) {
-    const enemy = enemies[i];
-    enemy.update();
-    enemy.draw();
-
-    if (enemy.y > canvas.height) {
-      enemies.splice(i, 1);
-      i--;
-    }
-  }
-
-  for (let i = 0; i < bullets.length; i++) {
-    const bullet = bullets[i];
-
-    for (let j = 0; j < enemies.length; j++) {
-      const enemy = enemies[j];
-
-      if (checkCollision(bullet, enemy)) {
+      if (bullet.y < 0) {
         bullets.splice(i, 1);
         i--;
-        enemies.splice(j, 1);
-        j--;
-        break;
       }
     }
-  }
 
-  for (let i = 0; i < enemies.length; i++) {
-    const enemy = enemies[i];
+    for(let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i];
+      enemy.update();
+      enemy.draw();
 
-    if (checkCollision(spaceship, enemy)) {
-      console.log("Game Over");
-      return;
+      if (enemy.y > canvas.height) {
+        enemies.splice(i, 1);
+        i--;
+      }
     }
+
+    for (let i = 0; i < bullets.length; i++) {
+      const bullet = bullets[i];
+
+      for (let j = 0; j < enemies.length; j++) {
+        const enemy = enemies[j];
+
+        if (checkCollision(bullet, enemy)) {
+          bullets.splice(i, 1);
+          i--;
+          enemies.splice(j, 1);
+          j--;
+          break;
+        }
+      }
+    }
+
+    for (let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i];
+
+      if (checkCollision(spaceship, enemy)) {
+        gameState = "gameover";
+        return;
+      }
+    }
+  } else if (gameState === "gameover") {
+    drawGameOverScreen();
   }
 
   requestAnimationFrame(update);
 }
 
-update();
+function resetGame() {
+  spaceship.x = canvas.width / 2 - 25;
+  spaceship.y = canvas.height - 50;
+  bullets.length = 0;
+  enemies.length = 0;
+}
 
 document.addEventListener("keydown", (e) => {
   if (e.code === "ArrowLeft" && spaceship.x > 0) {
@@ -140,6 +169,16 @@ document.addEventListener("keydown", (e) => {
   } else if (e.code === "ArrowRight" && spaceship.x < canvas.width - spaceship.width) {
     spaceship.move(10);
   } else if (e.code === "Space") {
-    bullets.push(new Bullet(spaceship.x + spaceship.width / 2 - 2.5, spaceship.y, 5, 15));
+    if (gameState === "start") {
+      gameState = "play";
+    } else if (gameState === "gameover") {
+      gameState = "start";
+      resetGame();
+    } else if (gameState === "play") {
+      bullets.push(new Bullet(spaceship.x + spaceship.width / 2 - 2.5, spaceship.y, 5, 15));
+    }
   }
 });
+
+update();
+
