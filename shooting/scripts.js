@@ -146,7 +146,6 @@ function update() {
     drawStartScreen();
   } else if (gameState === "play") {
     spaceship.draw();
-    drawScore();
 
     for (const bullet of bullets) {
       bullet.update();
@@ -157,6 +156,8 @@ function update() {
       enemy.update();
       enemy.draw();
     }
+
+    drawScore(); // スコアを最後に描画
 
     if (Math.random() < 0.02) {
       enemies.push(new Enemy(Math.random() * (canvas.width - 40), 0, 40, 40));
@@ -192,3 +193,4 @@ function update() {
 }
 
 update();
+
